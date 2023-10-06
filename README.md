@@ -1,1 +1,3 @@
 # pokedexGo
+
+This is a simple CLI program that uses [PokeAPI](https://pokeapi.co/) to let users explore different locations, catch Pokemon and inspect the Pokemon they catch using the Pokedex. This program is made of three different Go modules working together, but the pokedexgo module is the main module that uses the other two modules for creating cache and gathering data. I might add some improvements and extra functions to this app at some point in the future.
