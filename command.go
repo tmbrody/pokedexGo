@@ -1,72 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/tmbrody/pokeapi"
-	"github.com/tmbrody/pokecache"
+	"github.com/peterh/liner"
+	"github.com/tmbrody/pokedexGo/pokeapi"
 )
-
-var cache *pokecache.Cache
-
-type Pokemon struct {
-	Name           string    `json:"name"`
-	BaseExperience int       `json:"base_experience"`
-	Height         int       `json:"height"`
-	Weight         int       `json:"weight"`
-	Stats          []APIStat `json:"stats"`
-	Types          []APIType `json:"types"`
-}
-
-type APIStat struct {
-	BaseStat int  `json:"base_stat"`
-	Stat     Stat `json:"stat"`
-}
-
-type Stat struct {
-	Name string `json:"name"`
-}
-
-type APIType struct {
-	Type Type `json:"type"`
-}
-
-type Type struct {
-	Name string `json:"name"`
-}
-
-func (p *Pokemon) FormatStats() string {
-	var statsText string
-	for _, apiStat := range p.Stats {
-		statsText += fmt.Sprintf("  -%s: %d\n", apiStat.Stat.Name, apiStat.BaseStat)
-	}
-	return statsText
-}
-
-func (p *Pokemon) FormatTypes() string {
-	var typesText string
-	for _, apiType := range p.Types {
-		typesText += fmt.Sprintf("  - %s\n", apiType.Type.Name)
-	}
-	return typesText
-}
-
-var pokedex map[string]Pokemon
-
-type cliCommand struct {
-	name        string
-	description string
-	callback    func(config *pokeapi.Config, args []string) error
-}
-
-var commands map[string]cliCommand
 
 func commandHelp(config *pokeapi.Config, args []string) error {
 	fmt.Println("\nWelcome to PokedexGo\n\nAvailable commands:")
@@ -80,8 +24,9 @@ func commandHelp(config *pokeapi.Config, args []string) error {
 	return nil
 }
 
-func commandExit(config *pokeapi.Config, args []string) error {
+func commandExit(line *liner.State, config *pokeapi.Config, args []string) error {
 	fmt.Println("\nExiting the Pokedex")
+	line.Close()
 	os.Exit(0)
 	return nil
 }
@@ -269,87 +214,4 @@ func commandPokedex(config *pokeapi.Config, args []string) error {
 		}
 	}
 	return nil
-}
-
-func main() {
-	pokedex = make(map[string]Pokemon)
-
-	config := &pokeapi.Config{}
-
-	cache = pokecache.NewCache(5 * time.Minute)
-
-	commands = map[string]cliCommand{
-		"help": {
-			name:        "help",
-			description: "Displays a help message",
-			callback:    commandHelp,
-		},
-		"exit": {
-			name:        "exit",
-			description: "Exits the Pokedex",
-			callback:    commandExit,
-		},
-		"map": {
-			name:        "map",
-			description: "Displays the next 20 location areas",
-			callback:    commandMap,
-		},
-		"mapb": {
-			name:        "mapb",
-			description: "Displays the previous 20 location areas",
-			callback:    commandMapBack,
-		},
-		"explore": {
-			name:        "explore",
-			description: "Explores a location area and displays the Pokemon found",
-			callback:    commandExplore,
-		},
-		"catch": {
-			name:        "catch",
-			description: "Tries catching a Pokemon",
-			callback:    commandCatch,
-		},
-		"inspect": {
-			name:        "inspect",
-			description: "Displays various Pokemon stats",
-			callback:    commandInspect,
-		},
-		"pokedex": {
-			name:        "pokedex",
-			description: "Displays all caught Pokemon",
-			callback:    commandPokedex,
-		},
-	}
-
-	scanner := bufio.NewScanner(os.Stdin)
-
-	for {
-		fmt.Printf("Pokedex > ")
-
-		if !scanner.Scan() {
-			break
-		}
-
-		input := strings.TrimSpace(scanner.Text())
-		parts := strings.Fields(input)
-
-		if len(parts) == 0 {
-			continue
-		}
-
-		cmdName := parts[0]
-		cmdArgs := parts[1:]
-
-		if cmd, ok := commands[cmdName]; ok {
-			err := cmd.callback(config, cmdArgs)
-			if err != nil {
-				fmt.Printf("\nError executing command: %v\n\n", err)
-			}
-		} else {
-			fmt.Println("\nUnknown command. Type 'help' for a list of commands.")
-			fmt.Println()
-		}
-	}
-
-	cache.Close()
 }
